@@ -1,5 +1,7 @@
 # DocSQL
 
+[![CI](https://github.com/sooryasv/docsql/actions/workflows/ci.yml/badge.svg)](https://github.com/sooryasv/docsql/actions/workflows/ci.yml)
+
 Ask one question and get an answer grounded in **your PDFs**, **a read-only SQL database**, or **both** — with every claim traceable (clickable citations, executed SQL, and rows) and a security model backed by real-Postgres tests.
 
 **Live demo:** [https://docsql.sooryasv.me](https://docsql.sooryasv.me) *(1-click **Demo Admin** → try the **SQL** and **Hybrid** sample pills → inspect `/metrics`; bounded by daily quotas and Cloudflare WAF)*
@@ -73,7 +75,7 @@ Run them yourself: [`docs/LOCAL_VERIFICATION.md`](docs/LOCAL_VERIFICATION.md).
 | Doc retrieval `hit@5` / Required-fact recall | **14/15 (93%)** / **14/15 (93%)** |
 | Refusal accuracy (OOS) / False-refusal rate | **5/5 (100%)** / **0/25 (0%)** |
 | Pre-filter invalid-citation rate → Post-filter integrity | **6/23 (26%) → 30/30 (100%)** *(empirical proof of the verification gate)* |
-| SQL execution accuracy (strict `gold_sql` match) | **9/15 (60%)** |
+| SQL execution accuracy (strict `gold_sql` match) | **9/15 (60%)** *(includes 2 misses from transient Gemini `503` overload)* |
 | Latency p50 / p95 | **5,450 ms / 14,800 ms** |
 
 Based on the `--sweep` calibration (`15/15` recall preserved up to `0.50`), production runs with `MIN_COSINE_SIMILARITY=0.50`. To re-run against a live key (use `--delay 10` on free-tier RPM limits):
@@ -97,6 +99,16 @@ Sign in with **Demo analyst / Demo admin** (no password). The metrics page is ad
 
 > The “Destructive request” sample pill is **non-deterministic with a live model** (the model may refuse, or emit a write
 > that the guard then blocks). The deterministic proof that writes are blocked lives in the test suite.
+
+## Repository layout
+
+```text
+backend/app/    api/ · services/ (sql_guard, sql_executor, rag_service, agent_graph, query_service, usage_service)
+backend/        alembic/ · tests/ (test_sql_security, test_rag_graph_sse, test_auth_documents) · evals/ (run_eval, dataset.json)
+frontend/src/   api.ts · api.test.ts · components/ · pages/
+docs/           ARCHITECTURE · DECISIONS · EVAL_REPORT · LOCAL_VERIFICATION · SPEC · runbook
+infra           Dockerfile · docker-compose.yml · docker/init-roles.sql · .github/workflows/ci.yml
+```
 
 ## Verification & production engineering
 
