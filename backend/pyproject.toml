@@ -1,0 +1,59 @@
+[project]
+name = "docsql-backend"
+version = "1.0.0"
+description = "DocSQL: guardrailed document + SQL question answering on a single PostgreSQL"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi==0.165.0",
+  "uvicorn[standard]==0.54.0",
+  "SQLAlchemy[asyncio]==2.1.9",
+  "asyncpg==0.32.0",
+  "alembic==1.20.1",
+  "pydantic==2.14.4",
+  "pydantic-settings==2.16.3",
+  "pgvector==0.5.1",
+  "langgraph==1.2.24",
+  "google-genai==3.6.1",
+  "sqlglot==30.33.0",
+  "pypdf==7.1.1",
+  "PyJWT==2.15.1",
+  "pwdlib[argon2]==0.4.2",
+  "structlog==26.1.0",
+  "python-multipart==0.0.34",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==9.2.0",
+  "pytest-asyncio==1.5.0",
+  "httpx==0.28.1",
+  "fpdf2==2.9.0",
+  "ruff==0.17.6",
+  "mypy==2.4.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "SIM", "RUF"]
+ignore = ["B008", "RUF012", "E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["tests", "evals", "scripts", "alembic/versions"]
+
+[[tool.mypy.overrides]]
+module = ["pgvector.*", "sqlglot.*", "pwdlib.*", "langgraph.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]

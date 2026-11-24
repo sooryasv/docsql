@@ -1,0 +1,39 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: docsql
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init-roles.sql:/docker-entrypoint-initdb.d/10-init-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d docsql"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/docsql
+      ANALYTICS_READONLY_DATABASE_URL: postgresql://docsql_readonly:docsql_readonly@db:5432/docsql
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-dev-only-secret}
+      ALLOWED_ORIGINS: http://localhost:8000
+      MOCK_LLM: ${MOCK_LLM:-true}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_CHAT_MODEL: ${GEMINI_CHAT_MODEL:-gemini-3.5-flash-lite}
+      MIN_COSINE_SIMILARITY: ${MIN_COSINE_SIMILARITY:-0.50}
+      RUN_SEED_ON_STARTUP: "true"
+    ports: ["8000:8000"]
+    # Release step (never in lifespan): migrate, then serve.
+    command: >
+      sh -c "alembic upgrade head &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
+
+volumes:
+  pgdata:

@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+@layer base {
+  body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; overflow-x: clip; }
+  details > summary { cursor: pointer; }
+}

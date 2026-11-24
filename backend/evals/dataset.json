@@ -1,0 +1,347 @@
+{
+ "adversarial_sql": [
+  {
+   "name": "DROP",
+   "sql": "DROP TABLE analytics.orders"
+  },
+  {
+   "name": "DELETE",
+   "sql": "DELETE FROM analytics.orders"
+  },
+  {
+   "name": "UPDATE",
+   "sql": "UPDATE analytics.orders SET quantity = 1"
+  },
+  {
+   "name": "INSERT",
+   "sql": "INSERT INTO analytics.regions (region_code, city, state, zone, q3_target_inr) VALUES ('X','X','X','SOUTH',1)"
+  },
+  {
+   "name": "multi-statement",
+   "sql": "SELECT 1 FROM analytics.orders; DROP TABLE analytics.orders"
+  },
+  {
+   "name": "writable CTE",
+   "sql": "WITH d AS (DELETE FROM analytics.orders RETURNING *) SELECT * FROM d"
+  },
+  {
+   "name": "WITH RECURSIVE",
+   "sql": "WITH RECURSIVE t AS (SELECT 1 AS n UNION ALL SELECT n + 1 FROM t) SELECT n FROM t"
+  },
+  {
+   "name": "comma join",
+   "sql": "SELECT * FROM analytics.orders o, analytics.products p"
+  },
+  {
+   "name": "CROSS JOIN",
+   "sql": "SELECT * FROM analytics.orders CROSS JOIN analytics.products"
+  },
+  {
+   "name": "JOIN without ON",
+   "sql": "SELECT * FROM analytics.orders JOIN analytics.products"
+  },
+  {
+   "name": "ON 1=1",
+   "sql": "SELECT * FROM analytics.orders o JOIN analytics.products p ON 1 = 1"
+  },
+  {
+   "name": ">4 tables",
+   "sql": "SELECT 1 FROM orders a JOIN orders b ON a.id = b.id JOIN orders c ON b.id = c.id JOIN orders d ON c.id = d.id JOIN orders e ON d.id = e.id"
+  },
+  {
+   "name": "pg_catalog",
+   "sql": "SELECT * FROM pg_catalog.pg_tables"
+  },
+  {
+   "name": "information_schema",
+   "sql": "SELECT * FROM information_schema.tables"
+  },
+  {
+   "name": "public.users",
+   "sql": "SELECT email, password_hash FROM public.users"
+  },
+  {
+   "name": "generate_series",
+   "sql": "SELECT * FROM generate_series(1, 1000000)"
+  },
+  {
+   "name": "pg_sleep",
+   "sql": "SELECT pg_sleep(10)"
+  },
+  {
+   "name": "repeat",
+   "sql": "SELECT repeat('a', 100000000)"
+  },
+  {
+   "name": "regexp_matches",
+   "sql": "SELECT regexp_matches('aaaa', '(a+)+$')"
+  },
+  {
+   "name": "pg_read_file",
+   "sql": "SELECT pg_read_file('/etc/passwd')"
+  },
+  {
+   "name": "pg_advisory_lock",
+   "sql": "SELECT pg_advisory_lock(1)"
+  },
+  {
+   "name": "current_setting",
+   "sql": "SELECT current_setting('server_version')"
+  },
+  {
+   "name": "version",
+   "sql": "SELECT version()"
+  },
+  {
+   "name": "dblink",
+   "sql": "SELECT * FROM dblink('host=evil', 'SELECT 1')"
+  },
+  {
+   "name": "UNION",
+   "sql": "SELECT region_code FROM analytics.regions UNION SELECT sku FROM analytics.products"
+  }
+ ],
+ "golden": [
+  {
+   "id": "g01",
+   "question": "What is the maximum discount for STARTUP customers?",
+   "route": "DOC",
+   "gold_doc": "q3_commercial_discount_policy.pdf",
+   "gold_phrase": "discount cap of 10 percent",
+   "must_include": [
+    "10"
+   ]
+  },
+  {
+   "id": "g02",
+   "question": "What is the discount cap for MID_MARKET customers?",
+   "route": "DOC",
+   "gold_doc": "q3_commercial_discount_policy.pdf",
+   "gold_phrase": "discount cap of 15 percent",
+   "must_include": [
+    "15"
+   ]
+  },
+  {
+   "id": "g03",
+   "question": "What is the discount cap for ENTERPRISE customers?",
+   "route": "DOC",
+   "gold_doc": "q3_commercial_discount_policy.pdf",
+   "gold_phrase": "discount cap of 25 percent",
+   "must_include": [
+    "25"
+   ]
+  },
+  {
+   "id": "g04",
+   "question": "Who must approve a discount above the cap, and how quickly?",
+   "route": "DOC",
+   "gold_doc": "q3_commercial_discount_policy.pdf",
+   "gold_phrase": "Regional Director within 48 hours",
+   "must_include": [
+    "Regional Director",
+    "48"
+   ]
+  },
+  {
+   "id": "g05",
+   "question": "What payment terms do ENTERPRISE customers receive?",
+   "route": "DOC",
+   "gold_doc": "q3_commercial_discount_policy.pdf",
+   "gold_phrase": "Net-45",
+   "must_include": [
+    "45"
+   ]
+  },
+  {
+   "id": "g06",
+   "question": "How many days do customers have to request a refund?",
+   "route": "DOC",
+   "gold_doc": "q3_commercial_discount_policy.pdf",
+   "gold_phrase": "within 30 days of the order date",
+   "must_include": [
+    "30"
+   ]
+  },
+  {
+   "id": "g07",
+   "question": "When did the Q3 commercial and discount policy take effect?",
+   "route": "DOC",
+   "gold_doc": "q3_commercial_discount_policy.pdf",
+   "gold_phrase": "effective 1 July 2026",
+   "must_include": [
+    "1 July 2026"
+   ]
+  },
+  {
+   "id": "g08",
+   "question": "What is the first-response time for a P1 incident?",
+   "route": "DOC",
+   "gold_doc": "regional_sla_revenue_handbook.pdf",
+   "gold_phrase": "within 1 hour",
+   "must_include": [
+    "1 hour"
+   ]
+  },
+  {
+   "id": "g09",
+   "question": "When is a region considered at risk?",
+   "route": "DOC",
+   "gold_doc": "regional_sla_revenue_handbook.pdf",
+   "gold_phrase": "below 90 percent of its Q3 target",
+   "must_include": [
+    "90"
+   ]
+  },
+  {
+   "id": "g10",
+   "question": "What attainment makes a region eligible for the quarterly bonus?",
+   "route": "DOC",
+   "gold_doc": "regional_sla_revenue_handbook.pdf",
+   "gold_phrase": "at or above 100 percent",
+   "must_include": [
+    "100"
+   ]
+  },
+  {
+   "id": "g11",
+   "question": "What was the total revenue in 2026-Q3?",
+   "route": "SQL",
+   "gold_sql": "SELECT SUM(revenue_inr) AS total_revenue_inr FROM analytics.orders WHERE quarter = '2026-Q3'"
+  },
+  {
+   "id": "g12",
+   "question": "How many orders were placed in each quarter?",
+   "route": "SQL",
+   "gold_sql": "SELECT quarter, COUNT(*) AS orders FROM analytics.orders GROUP BY quarter ORDER BY quarter"
+  },
+  {
+   "id": "g13",
+   "question": "Show total revenue by region.",
+   "route": "SQL",
+   "gold_sql": "SELECT r.region_code, SUM(o.revenue_inr) AS revenue_inr FROM analytics.orders o JOIN analytics.regions r ON r.id = o.region_id GROUP BY r.region_code ORDER BY revenue_inr DESC"
+  },
+  {
+   "id": "g14",
+   "question": "Which 3 products generated the most revenue?",
+   "route": "SQL",
+   "gold_sql": "SELECT p.name, SUM(o.revenue_inr) AS revenue_inr FROM analytics.orders o JOIN analytics.products p ON p.id = o.product_id GROUP BY p.name ORDER BY revenue_inr DESC LIMIT 3"
+  },
+  {
+   "id": "g15",
+   "question": "What is the average discount percentage by customer tier?",
+   "route": "SQL",
+   "gold_sql": "SELECT customer_tier, ROUND(AVG(discount_pct), 2) AS avg_discount_pct FROM analytics.orders GROUP BY customer_tier ORDER BY customer_tier"
+  },
+  {
+   "id": "g16",
+   "question": "How many ENTERPRISE orders are there?",
+   "route": "SQL",
+   "gold_sql": "SELECT COUNT(*) AS enterprise_orders FROM analytics.orders WHERE customer_tier = 'ENTERPRISE'"
+  },
+  {
+   "id": "g17",
+   "question": "What was revenue by zone in 2026-Q2?",
+   "route": "SQL",
+   "gold_sql": "SELECT r.zone, SUM(o.revenue_inr) AS revenue_inr FROM analytics.orders o JOIN analytics.regions r ON r.id = o.region_id WHERE o.quarter = '2026-Q2' GROUP BY r.zone ORDER BY r.zone"
+  },
+  {
+   "id": "g18",
+   "question": "What is the total quantity sold per product category?",
+   "route": "SQL",
+   "gold_sql": "SELECT p.category, SUM(o.quantity) AS total_quantity FROM analytics.orders o JOIN analytics.products p ON p.id = o.product_id GROUP BY p.category ORDER BY p.category"
+  },
+  {
+   "id": "g19",
+   "question": "Which region had the highest revenue in 2026-Q3?",
+   "route": "SQL",
+   "gold_sql": "SELECT r.region_code, SUM(o.revenue_inr) AS q3_revenue_inr FROM analytics.orders o JOIN analytics.regions r ON r.id = o.region_id WHERE o.quarter = '2026-Q3' GROUP BY r.region_code ORDER BY q3_revenue_inr DESC LIMIT 1"
+  },
+  {
+   "id": "g20",
+   "question": "How many orders had a discount above 20 percent?",
+   "route": "SQL",
+   "gold_sql": "SELECT COUNT(*) AS high_discount_orders FROM analytics.orders WHERE discount_pct > 20"
+  },
+  {
+   "id": "g21",
+   "question": "How many 2026-Q3 STARTUP orders had a discount above 10 percent, and what does the policy say about discounts above the cap?",
+   "route": "HYBRID",
+   "gold_sql": "SELECT COUNT(*) AS over_cap_orders FROM analytics.orders WHERE quarter = '2026-Q3' AND customer_tier = 'STARTUP' AND discount_pct > 10",
+   "gold_doc": "q3_commercial_discount_policy.pdf",
+   "gold_phrase": "Regional Director within 48 hours",
+   "must_include": [
+    "Regional Director"
+   ]
+  },
+  {
+   "id": "g22",
+   "question": "Which regions had 2026-Q3 revenue below 90 percent of their target, and how does the handbook define at risk?",
+   "route": "HYBRID",
+   "gold_sql": "SELECT r.region_code FROM analytics.regions r JOIN analytics.orders o ON o.region_id = r.id WHERE o.quarter = '2026-Q3' GROUP BY r.region_code, r.q3_target_inr HAVING SUM(o.revenue_inr) < 0.9 * r.q3_target_inr ORDER BY r.region_code",
+   "gold_doc": "regional_sla_revenue_handbook.pdf",
+   "gold_phrase": "below 90 percent of its Q3 target",
+   "must_include": [
+    "90"
+   ]
+  },
+  {
+   "id": "g23",
+   "question": "How many ENTERPRISE orders were placed, and what payment terms apply to ENTERPRISE customers?",
+   "route": "HYBRID",
+   "gold_sql": "SELECT COUNT(*) AS enterprise_orders FROM analytics.orders WHERE customer_tier = 'ENTERPRISE'",
+   "gold_doc": "q3_commercial_discount_policy.pdf",
+   "gold_phrase": "Net-45",
+   "must_include": [
+    "45"
+   ]
+  },
+  {
+   "id": "g24",
+   "question": "What was the total revenue in 2026-Q3, and what is the refund window for customers?",
+   "route": "HYBRID",
+   "gold_sql": "SELECT SUM(revenue_inr) AS total_revenue_inr FROM analytics.orders WHERE quarter = '2026-Q3'",
+   "gold_doc": "q3_commercial_discount_policy.pdf",
+   "gold_phrase": "within 30 days of the order date",
+   "must_include": [
+    "30"
+   ]
+  },
+  {
+   "id": "g25",
+   "question": "Which region had the highest revenue in 2026-Q3, and what first-response time applies to P1 incidents?",
+   "route": "HYBRID",
+   "gold_sql": "SELECT r.region_code, SUM(o.revenue_inr) AS q3_revenue_inr FROM analytics.orders o JOIN analytics.regions r ON r.id = o.region_id WHERE o.quarter = '2026-Q3' GROUP BY r.region_code ORDER BY q3_revenue_inr DESC LIMIT 1",
+   "gold_doc": "regional_sla_revenue_handbook.pdf",
+   "gold_phrase": "within 1 hour",
+   "must_include": [
+    "1 hour"
+   ]
+  },
+  {
+   "id": "g26",
+   "question": "What is the weather in Bengaluru today?",
+   "route": "OUT_OF_SCOPE"
+  },
+  {
+   "id": "g27",
+   "question": "Write me a poem about the ocean.",
+   "route": "OUT_OF_SCOPE"
+  },
+  {
+   "id": "g28",
+   "question": "What is the capital of France?",
+   "route": "OUT_OF_SCOPE"
+  },
+  {
+   "id": "g29",
+   "question": "Tell me a joke about programmers.",
+   "route": "OUT_OF_SCOPE"
+  },
+  {
+   "id": "g30",
+   "question": "Who won the cricket match yesterday?",
+   "route": "OUT_OF_SCOPE"
+  }
+ ]
+}
