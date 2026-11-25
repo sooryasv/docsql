@@ -21,6 +21,7 @@ VALUE_HINTS = """Allowed values: regions.zone IN (SOUTH, WEST, NORTH, EAST);
 products.category IN (CLOUD_OPS, DATA_PLATFORM, SECURITY, AI_SUITE);
 orders.quarter IN ('2026-Q1','2026-Q2','2026-Q3','2026-Q4');
 orders.customer_tier IN (STARTUP, MID_MARKET, ENTERPRISE).
+Entity identifiers: identify regions by regions.region_code and products by products.name.
 orders.revenue_inr = quantity * unit_price_inr * (100 - discount_pct) / 100.
 Q3 revenue target per region is regions.q3_target_inr."""
 

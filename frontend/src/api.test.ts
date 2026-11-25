@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, SSEParser, getMe, setUnauthorizedHandler, streamQuery, type QueryResponse } from "./api";
+import { ApiError, SSEParser, getMe, listDocuments, setUnauthorizedHandler, streamQuery, type QueryResponse } from "./api";
 
 const enc = new TextEncoder();
 const final: QueryResponse = {
@@ -97,12 +97,21 @@ describe("streamQuery", () => {
 });
 
 describe("request wrapper", () => {
-  it("calls the unauthorized handler on 401 from a protected endpoint", async () => {
+  it("does not trigger the unauthorized handler on 401 from /auth/me", async () => {
     const handler = vi.fn();
     setUnauthorizedHandler(handler);
     const unauth = JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "no", request_id: "r" } });
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(unauth, { status: 401 })));
     await expect(getMe()).rejects.toBeInstanceOf(ApiError);
-    expect(handler).not.toHaveBeenCalled(); // /auth/me probing must not pop the login modal itself
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("calls the unauthorized handler on 401 from a protected endpoint", async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const unauth = JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "no", request_id: "r" } });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(unauth, { status: 401 })));
+    await expect(listDocuments()).rejects.toBeInstanceOf(ApiError);
+    expect(handler).toHaveBeenCalledTimes(1);
   });
 });

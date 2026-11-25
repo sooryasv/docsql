@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Send, Square } from "lucide-react";
+import { Loader2, Send, Square, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, streamQuery, type Me, type QueryResponse, type Stage } from "../api";
 import { AnswerCard } from "../components/AnswerCard";
@@ -32,29 +32,45 @@ interface Props { me: Me | null; onAuthOpen: () => void }
 export function WorkspacePage({ me, onAuthOpen }: Props) {
   const queryClient = useQueryClient();
   const [question, setQuestion] = useState("");
+  const [askedQuestion, setAskedQuestion] = useState("");
   const [stages, setStages] = useState<Stage[]>([]);
   const [result, setResult] = useState<QueryResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [running, setRunning] = useState(false);
+  const inFlight = useRef(false);
   const controller = useRef<AbortController | null>(null);
 
   useEffect(() => () => controller.current?.abort(), []);
 
+  const stop = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    controller.current?.abort();
+  };
+
   const ask = async (text: string) => {
     const q = text.trim();
-    if (q.length < 3 || running) return;
+    if (q.length < 3 || inFlight.current) return;
     if (!me) return onAuthOpen();
-    controller.current = new AbortController();
+    inFlight.current = true;
+    const ac = new AbortController();
+    controller.current = ac;
+    setAskedQuestion(q);
+    setQuestion("");
     setRunning(true); setResult(null); setError(null); setStages([]);
     try {
-      setResult(await streamQuery(q, controller.current.signal, (s) => setStages((prev) => [...prev, s])));
+      setResult(await streamQuery(q, ac.signal, (s) => setStages((prev) => [...prev, s])));
     } catch (e) {
+      setQuestion((cur) => (cur ? cur : q));
       if (e instanceof DOMException && e.name === "AbortError") setError(new ApiError(0, "CANCELLED", "Cancelled"));
       else setError(e instanceof ApiError ? e : new ApiError(0, "NETWORK", "Network error"));
     } finally {
+      inFlight.current = false;
+      controller.current = null;
       setRunning(false);
       void queryClient.invalidateQueries({ queryKey: ["me"] });
       void queryClient.invalidateQueries({ queryKey: ["history"] });
+      void queryClient.invalidateQueries({ queryKey: ["metrics"] });
     }
   };
   const current = stages.at(-1);
@@ -66,7 +82,7 @@ export function WorkspacePage({ me, onAuthOpen }: Props) {
         <Card className="space-y-3 p-4">
           <div className="flex flex-wrap gap-2" aria-label="Sample prompts">
             {SAMPLES.map((s) => (
-              <button key={s.label} onClick={() => { setQuestion(s.q); void ask(s.q); }} disabled={running}
+              <button key={s.label} type="button" onClick={() => void ask(s.q)} disabled={running}
                 className={cn("rounded-full border px-3 py-1 text-xs font-medium hover:bg-slate-50 disabled:opacity-50",
                   s.label === "Destructive request" ? "border-red-300 text-red-700" : "border-slate-300 text-slate-700")}>
                 {s.label}
@@ -74,14 +90,22 @@ export function WorkspacePage({ me, onAuthOpen }: Props) {
             ))}
           </div>
           <form className="flex items-start gap-2" onSubmit={(e) => { e.preventDefault(); void ask(question); }}>
-            <textarea value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={1000} rows={2}
-              aria-label="Your question" placeholder="Ask about the policy documents, the sales data, or both…"
-              className="min-h-[3rem] min-w-0 flex-1 resize-none rounded-md border border-slate-300 p-2 text-sm"
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void ask(question); } }} />
+            <div className="relative min-w-0 flex-1">
+              <textarea value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={1000} rows={2}
+                aria-label="Your question" placeholder="Ask about the policy documents, the sales data, or both…"
+                className="min-h-[3rem] w-full resize-none rounded-md border border-slate-300 p-2 pr-8 text-sm"
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void ask(question); } }} />
+              {question && !running && (
+                <button type="button" onClick={() => setQuestion("")} aria-label="Clear question"
+                  className="absolute right-2 top-2 rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                  <X className="h-4 w-4" aria-hidden />
+                </button>
+              )}
+            </div>
             {running ? (
-              <Button type="button" variant="outline" className="shrink-0" onClick={() => controller.current?.abort()}><Square className="h-4 w-4" aria-hidden /> Stop</Button>
+              <Button key="stop" type="button" variant="outline" className="shrink-0" onClick={stop}><Square className="h-4 w-4" aria-hidden /> Stop</Button>
             ) : (
-              <Button type="submit" className="shrink-0" disabled={question.trim().length < 3}><Send className="h-4 w-4" aria-hidden /> Ask</Button>
+              <Button key="ask" type="submit" className="shrink-0" disabled={question.trim().length < 3}><Send className="h-4 w-4" aria-hidden /> Ask</Button>
             )}
           </form>
           {!me && <p className="text-xs text-slate-500">Sign in (or use a demo user) to ask questions.</p>}
@@ -92,6 +116,7 @@ export function WorkspacePage({ me, onAuthOpen }: Props) {
 
         {running && (
           <Card className="p-4" role="status" aria-live="polite">
+            {askedQuestion && <p className="mb-2 text-sm font-medium text-slate-800">{askedQuestion}</p>}
             <p className="mb-2 flex items-center gap-2 text-sm font-medium"><Loader2 className="h-4 w-4 animate-spin text-indigo-600" aria-hidden />
               {STAGE_LABELS[current?.stage ?? "routing"] ?? current?.stage}…</p>
             <ol className="flex flex-wrap gap-1.5 text-xs text-slate-500">
@@ -107,7 +132,7 @@ export function WorkspacePage({ me, onAuthOpen }: Props) {
           </div>
         )}
         {error?.code === "CANCELLED" && <p className="text-sm text-slate-500">Query cancelled.</p>}
-        {result && <AnswerCard result={result} />}
+        {result && <AnswerCard result={result} question={askedQuestion} />}
       </div>
     </div>
   );

@@ -34,17 +34,17 @@ All checks passed!
 Success: no issues found in 25 source files
 
 ## backend: pytest -q (against real PostgreSQL + pgvector)
-109 passed in 25.86s
+110 passed in 22.82s
 
 ## frontend: npm run lint && npm run typecheck && npm test && npm run build
-✓ src/api.test.ts (10 tests)
+✓ src/api.test.ts (11 tests)
 Test Files  1 passed (1)
-✓ built in 3.56s
+✓ built in 1.9s
 
 ## live eval: python -m evals.run_eval --sweep --delay 10 (gemini-3.5-flash-lite)
 - Guard block rate: 25/25 (100%)
-- Routing accuracy: 28/30 (93%) | Hit@5: 14/15 (93%) | Refusal: 5/5 (100%)
-- Citation integrity: 6/23 (26%) pre-filter -> 30/30 (100%) post-filter
+- Routing: 30/30 (100%) | SQL (strict): 14/15 (93%) | Hit@5 & Recall: 15/15 (100%) | Refusal: 5/5 (100%)
+- Citation integrity: 0/17 (0%) pre-filter -> 30/30 (100%) post-filter | p50/p95: 3504 / 6798 ms
 ```
 
 ## 5. Production smoke verification (`https://docsql.sooryasv.me`)

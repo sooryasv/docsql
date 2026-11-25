@@ -71,12 +71,12 @@ Run them yourself: [`docs/LOCAL_VERIFICATION.md`](docs/LOCAL_VERIFICATION.md).
 | Metric | Measured Result |
 |---|---|
 | Adversarial SQL guard block rate | **25/25 (100%)** |
-| Routing accuracy | **28/30 (93%)** *(2 misses from transient Gemini `503` overload)* |
-| Doc retrieval `hit@5` / Required-fact recall | **14/15 (93%)** / **14/15 (93%)** |
+| Routing accuracy | **30/30 (100%)** *(4 transient Gemini `503`s recovered via backoff)* |
+| Doc retrieval `hit@5` / Required-fact recall | **15/15 (100%)** / **15/15 (100%)** |
 | Refusal accuracy (OOS) / False-refusal rate | **5/5 (100%)** / **0/25 (0%)** |
-| Pre-filter invalid-citation rate → Post-filter integrity | **6/23 (26%) → 30/30 (100%)** *(empirical proof of the verification gate)* |
-| SQL execution accuracy (strict `gold_sql` match) | **9/15 (60%)** *(includes 2 misses from transient Gemini `503` overload)* |
-| Latency p50 / p95 | **5,450 ms / 14,800 ms** |
+| Pre-filter invalid-citation rate → Post-filter integrity | **0/17 (0%) → 30/30 (100%)** *(down from `26%` pre-tuning; deterministic gate retained)* |
+| SQL execution accuracy (strict `gold_sql` match) | **14/15 (93%)** *(single miss `g19` returned exact `['CHN-S']` without unrequested revenue col)* |
+| Latency p50 / p95 | **3,504 ms / 6,798 ms** |
 
 Based on the `--sweep` calibration (`15/15` recall preserved up to `0.50`), production runs with `MIN_COSINE_SIMILARITY=0.50`. To re-run against a live key (use `--delay 10` on free-tier RPM limits):
 
@@ -112,7 +112,7 @@ infra           Dockerfile · docker-compose.yml · docker/init-roles.sql · .gi
 
 ## Verification & production engineering
 
-- **Automated gates:** `ruff` (lint + format), `mypy --strict`, **109 backend tests** against real PostgreSQL 16 + `pgvector` (never SQLite), **25/25** offline SQL guard check, ESLint, `tsc --noEmit`, **10 Vitest SSE parser tests**, and multi-stage Docker build (GitHub Actions CI: `backend`, `frontend`, `docker`).
+- **Automated gates:** `ruff` (lint + format), `mypy --strict`, **110 backend tests** against real PostgreSQL 16 + `pgvector` (never SQLite), **25/25** offline SQL guard check, ESLint, `tsc --noEmit`, **11 Vitest frontend tests**, and multi-stage Docker build (GitHub Actions CI: `backend`, `frontend`, `docker`).
 - **Cloud & serverless hardening:** Separate `/livez` (zero-DB liveness probe for AWS Lightsail so Neon scales to zero) vs. `/healthz` (deep readiness check on both pools + `pgvector >= 0.8.0`); `docsql_readonly` created via raw SQL (avoiding Neon Console superuser inheritance) and verified live against unauthorized reads/writes; Cloudflare Full (strict) TLS, Bot Fight Mode, and WAF rate limiting (`15 req / 10s` per IP on cost-bearing API routes).
 - **Verified live:** End-to-end on desktop and mobile at [https://docsql.sooryasv.me](https://docsql.sooryasv.me).
 

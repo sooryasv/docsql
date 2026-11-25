@@ -87,9 +87,9 @@ async def run_live(
 ) -> dict[str, object]:
     graph = build_graph(GraphDeps(provider=provider, db=db, settings=settings))
     user_id = uuid.uuid4()
-    async with db.primary.begin() as conn:  # throwaway eval user (cascade-deleted afterwards)
-        from sqlalchemy import text
+    from sqlalchemy import text
 
+    async with db.primary.begin() as conn:  # throwaway eval user (cascade-deleted in finally)
         await conn.execute(
             text(
                 "INSERT INTO users (id, email, full_name, password_hash, role) VALUES (:i, :e, 'eval', '!', 'ANALYST')"
@@ -102,53 +102,64 @@ async def run_live(
     }
     latencies: list[float] = []
     tokens = 0
-    for idx, item in enumerate(DATASET["golden"]):
-        if delay_s > 0 and idx > 0:
-            await asyncio.sleep(delay_s)
-        state = None
-        for attempt in (0, 1):
-            started = datetime.now(UTC)
-            try:
-                state = await graph.ainvoke(
-                    {"question": item["question"], "user_id": user_id, "retries": 0}
+    try:
+        for idx, item in enumerate(DATASET["golden"]):
+            if delay_s > 0 and idx > 0:
+                await asyncio.sleep(delay_s)
+            state = None
+            for attempt in (0, 1):
+                started = datetime.now(UTC)
+                try:
+                    state = await graph.ainvoke(
+                        {"question": item["question"], "user_id": user_id, "retries": 0}
+                    )
+                    break
+                except AppError as exc:
+                    if exc.code == "LLM_UNAVAILABLE" and delay_s > 0 and attempt == 0:
+                        await asyncio.sleep(max(delay_s, 15.0))
+                        continue
+                    print(f"  {item['id']}: {exc.code}", file=sys.stderr)
+                    state = {"route": None, "refused": False}
+                    break
+            assert state is not None
+            latencies.append((datetime.now(UTC) - started).total_seconds() * 1000)
+            tokens += int(state.get("tokens", 0))
+            ids = {c.id for c in state.get("chunks", [])}
+            integrity.append(all(i in ids for i in state.get("citations", [])))
+            stats["route"].append(state.get("route") == item["route"])
+            if item["route"] == "OUT_OF_SCOPE":
+                stats["refusal"].append(bool(state.get("refused")))
+                continue
+            stats["false_refusal"].append(bool(state.get("refused")))
+            if "gold_sql" in item:
+                gold = await execute_validated(
+                    db.readonly, validate_sql(item["gold_sql"]), settings.sql_timeout_ms
                 )
-                break
-            except AppError as exc:
-                if exc.code == "LLM_UNAVAILABLE" and delay_s > 0 and attempt == 0:
-                    await asyncio.sleep(max(delay_s, 15.0))
-                    continue
-                print(f"  {item['id']}: {exc.code}", file=sys.stderr)
-                state = {"route": None, "refused": False}
-                break
-        assert state is not None
-        latencies.append((datetime.now(UTC) - started).total_seconds() * 1000)
-        tokens += int(state.get("tokens", 0))
-        ids = {c.id for c in state.get("chunks", [])}
-        integrity.append(all(i in ids for i in state.get("citations", [])))
-        stats["route"].append(state.get("route") == item["route"])
-        if item["route"] == "OUT_OF_SCOPE":
-            stats["refusal"].append(bool(state.get("refused")))
-            continue
-        stats["false_refusal"].append(bool(state.get("refused")))
-        if "gold_sql" in item:
-            gold = await execute_validated(
-                db.readonly, validate_sql(item["gold_sql"]), settings.sql_timeout_ms
-            )
-            got = state.get("rows")
-            stats["sql"].append(got is not None and normalize(got) == normalize(gold.rows))
-        if "gold_phrase" in item:
-            title = TITLES[item["gold_doc"]]
-            phrase = " ".join(item["gold_phrase"].lower().split())
-            chunks = state.get("chunks", [])
-            stats["hit"].append(
-                any(
-                    c.title == title and phrase in " ".join(c.content.lower().split())
-                    for c in chunks
+                got = state.get("rows")
+                matched = got is not None and normalize(got) == normalize(gold.rows)
+                stats["sql"].append(matched)
+                if not matched:
+                    print(
+                        f"  [SQL MISS] {item['id']}: route={state.get('route')} "
+                        f"sql={state.get('executed_sql')!r} got={got} expected={gold.rows}",
+                        file=sys.stderr,
+                    )
+            if "gold_phrase" in item:
+                title = TITLES[item["gold_doc"]]
+                phrase = " ".join(item["gold_phrase"].lower().split())
+                chunks = state.get("chunks", [])
+                stats["hit"].append(
+                    any(
+                        c.title == title and phrase in " ".join(c.content.lower().split())
+                        for c in chunks
+                    )
                 )
-            )
-        if item.get("must_include"):
-            answer = str(state.get("answer", "")).lower()
-            stats["recall"].append(all(s.lower() in answer for s in item["must_include"]))
+            if item.get("must_include"):
+                answer = str(state.get("answer", "")).lower()
+                stats["recall"].append(all(s.lower() in answer for s in item["must_include"]))
+    finally:
+        async with db.primary.begin() as conn:
+            await conn.execute(text("DELETE FROM public.users WHERE id = :i"), {"i": user_id})
     cited = sum(len(raw) for raw, _ in provider.raw_citations)
     invalid = sum(1 for raw, ok in provider.raw_citations for i in raw if i not in ok)
     return {

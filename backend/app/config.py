@@ -2,10 +2,11 @@
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 EMBEDDING_DIM = 768
+DEV_JWT_SECRET = "dev-only-secret-change-me-dev-only-secret"
 
 
 class Settings(BaseSettings):
@@ -17,7 +18,7 @@ class Settings(BaseSettings):
     )
     use_null_pool: bool = False
 
-    jwt_secret: str = Field(default="dev-only-secret-change-me-dev-only-secret", min_length=16)
+    jwt_secret: str = Field(default=DEV_JWT_SECRET, min_length=16)
     jwt_expire_minutes: int = 60
     cookie_secure: bool = False
     allowed_origins: str = "http://localhost:5173,http://localhost:8000"
@@ -28,9 +29,10 @@ class Settings(BaseSettings):
 
     mock_llm: bool = True
     gemini_api_key: str = ""
-    gemini_chat_model: str = "gemini-2.5-flash-lite"
+    gemini_chat_model: str = "gemini-3.5-flash-lite"
+    gemini_sql_model: str = ""
     gemini_embed_model: str = "gemini-embedding-001"
-    min_cosine_similarity: float = 0.35
+    min_cosine_similarity: float = 0.50
 
     daily_query_limit: int = 20
     global_daily_query_limit: int = 200
@@ -42,6 +44,14 @@ class Settings(BaseSettings):
     request_deadline_s: float = 45
     sse_ping_interval_s: float = 10
     pdf_parse_timeout_s: float = 10
+
+    @model_validator(mode="after")
+    def _reject_default_secret_when_secure(self) -> "Settings":
+        if self.cookie_secure and self.jwt_secret == DEV_JWT_SECRET:
+            raise ValueError(
+                "JWT_SECRET must be changed from the dev default when COOKIE_SECURE=true"
+            )
+        return self
 
     @property
     def origins(self) -> list[str]:

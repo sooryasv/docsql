@@ -11,11 +11,12 @@ const COLORS = ["#4f46e5", "#0891b2", "#d97706", "#059669"];
 const MAX_TABLE_ROWS = 50;
 const ROUTE_TONE = { DOC: "indigo", SQL: "green", HYBRID: "amber", OUT_OF_SCOPE: "slate" } as const;
 
-export function AnswerCard({ result }: { result: QueryResponse }) {
+export function AnswerCard({ result, question }: { result: QueryResponse; question?: string }) {
   const [open, setOpen] = useState<Citation | null>(null);
   const hasRows = result.executed_sql !== null;
   return (
     <Card className="min-w-0 space-y-4 p-4" aria-live="polite">
+      {question && <p className="border-b border-slate-100 pb-2 text-sm font-medium text-slate-900">{question}</p>}
       <div className="flex flex-wrap items-center gap-2 text-xs">
         {result.route && <Badge tone={ROUTE_TONE[result.route]}>{result.route}</Badge>}
         <span className="text-slate-500">{result.latency_ms} ms · {result.tokens_used} tokens</span>

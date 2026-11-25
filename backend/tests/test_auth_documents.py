@@ -134,6 +134,18 @@ async def test_csrf_origin_guard(app) -> None:  # type: ignore[no-untyped-def]
     assert safe_get.status_code == 200
 
 
+def test_default_jwt_secret_is_rejected_when_cookie_secure_is_true(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pydantic import ValidationError
+
+    monkeypatch.delenv("JWT_SECRET", raising=False)
+    with pytest.raises(ValidationError):
+        Settings(cookie_secure=True, _env_file=None)
+    ok = Settings(cookie_secure=True, jwt_secret="prod-secret-long-enough-123456", _env_file=None)
+    assert ok.cookie_secure is True
+
+
 async def test_healthz_checks_both_pools_and_pgvector(client: httpx.AsyncClient) -> None:
     body = (await client.get("/healthz")).json()
     assert body["status"] == "ok"

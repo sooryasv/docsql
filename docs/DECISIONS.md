@@ -33,9 +33,10 @@ race (tested with 20 parallel calls vs. a limit of 5). **Trade-off:** counts att
 ## ADR-006 — Eval philosophy: live numbers vs. mock plumbing
 **Decision:** quality metrics are only reported from a live model run; mock runs prove plumbing and are labelled as such.
 **Why:** a mock cannot measure retrieval quality or SQL accuracy, and publishing its output would be misleading. **Consequence:**
-`docs/EVAL_REPORT.md` publishes single-run live Gemini metrics (`gemini-3.5-flash-lite` + `gemini-embedding-001`), including
-transient upstream `503` misses and the `26%` pre-filter invalid-citation rate caught `100%` by deterministic verification.
-The `--sweep` calibration set production `MIN_COSINE_SIMILARITY=0.50` (`15/15` recall preserved).
+`docs/EVAL_REPORT.md` publishes single-run live Gemini metrics (`gemini-3.5-flash-lite` + `gemini-embedding-001`). The first
+baseline exposed a `26%` (`6/23`) pre-filter invalid-citation rate (caught `100%` by deterministic verification), two `503`
+overloads, and `60%` strict SQL match; prompt tightening and 3-attempt exponential backoff raised the live run to `100%`
+routing/retrieval/recall, `93%` (`14/15`) strict SQL match, and `0%` pre-filter invalid citations at `MIN_COSINE_SIMILARITY=0.50`.
 
 ## ADR-007 — Embedding-model tagging
 **Decision:** `documents.embedding_model` is stored, every retrieval query filters on the current model, and the seed script
